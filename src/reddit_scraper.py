@@ -1,145 +1,187 @@
 """
-Reddit data collection via PRAW.
+Reddit data collection using Reddit's public JSON API.
+No credentials or registration required.
 
 Usage:
     python src/reddit_scraper.py
 
 Outputs one CSV per event to data/raw/reddit/{event_name}.csv
 
+How it works:
+    Reddit exposes a public JSON endpoint at:
+        https://www.reddit.com/r/{subreddit}/search.json
+    This works without authentication for read-only searches.
+    We paginate through results, filter by UTC timestamp client-side,
+    and deduplicate across queries by post ID.
+
+Rate limiting:
+    Reddit allows ~1 request/second for unauthenticated requests.
+    We use a 1.1s delay between requests to stay well within limits.
+
 Notes on historical data:
-- Reddit's search API is unreliable for posts older than ~6 months.
-  For the Nov 2025 and Feb 2026 events, results may be incomplete.
-  The scraper filters by UTC timestamp client-side to ensure date accuracy.
-- Duplicate posts (same ID from multiple queries) are deduplicated.
-- Rate limiting: PRAW handles this automatically, but large collections
-  may take several minutes per event.
+    For events from Nov 2025 and Feb 2026, Reddit's search index
+    may not return all posts — search coverage degrades for older content.
+    Apr/May 2026 events will have the most complete coverage.
 """
 
-import os
 import time
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-import praw
+import requests
 import pandas as pd
-from dotenv import load_dotenv
-from tqdm import tqdm
 
 from utils import EVENT_DATES, SUBREDDITS, SEARCH_QUERIES, event_calendar_window
 
-load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s")
 log = logging.getLogger(__name__)
 
-RAW_DIR = Path(__file__).parent.parent / "data" / "raw" / "reddit"
+RAW_DIR    = Path(__file__).parent.parent / "data" / "raw" / "reddit"
+BASE_URL   = "https://www.reddit.com"
+HEADERS    = {"User-Agent": "dwp2-luxury-sentiment-research/1.0 (academic project)"}
+DELAY      = 1.1   # seconds between requests
+MAX_PAGES  = 10    # max pagination depth per query (100 posts/page = 1000 posts max)
 
 
-def build_reddit_client() -> praw.Reddit:
-    client_id     = os.getenv("REDDIT_CLIENT_ID")
-    client_secret = os.getenv("REDDIT_CLIENT_SECRET")
-    user_agent    = os.getenv("REDDIT_USER_AGENT", "dwp2-sentiment/1.0")
-
-    if not client_id or not client_secret:
-        raise EnvironmentError(
-            "REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET must be set in .env"
-        )
-
-    return praw.Reddit(
-        client_id=client_id,
-        client_secret=client_secret,
-        user_agent=user_agent,
-    )
-
-
-def _date_to_epoch(d) -> int:
+def _epoch(d) -> int:
     return int(datetime(d.year, d.month, d.day, tzinfo=timezone.utc).timestamp())
 
 
-def scrape_event(reddit: praw.Reddit, event_name: str, event_date,
-                 window_days: int = 7, limit_per_query: int = 500) -> pd.DataFrame:
+def fetch_page(subreddit: str, query: str, after_token: str | None,
+               start_epoch: int, end_epoch: int) -> tuple[list[dict], str | None]:
     """
-    Scrape Reddit posts for a single event window.
+    Fetch one page of search results from Reddit's public JSON API.
+    Returns (list_of_post_dicts, next_page_token_or_None).
+    """
+    params = {
+        "q":           query,
+        "sort":        "new",
+        "t":           "all",
+        "limit":       100,
+        "restrict_sr": 1,
+        "type":        "link",
+    }
+    if after_token:
+        params["after"] = after_token
 
-    Returns a DataFrame of deduplicated posts within the date window.
-    """
+    url = f"{BASE_URL}/r/{subreddit}/search.json"
+
+    try:
+        resp = requests.get(url, headers=HEADERS, params=params, timeout=15)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        log.warning(f"    Request failed: {e}")
+        return [], None
+
+    data = resp.json().get("data", {})
+    children = data.get("children", [])
+    next_token = data.get("after")  # None if no more pages
+
+    posts = []
+    stop_early = False
+
+    for child in children:
+        post = child.get("data", {})
+        created = post.get("created_utc", 0)
+
+        # Posts come newest-first (sort=new). Once we go past the window, stop.
+        if created < start_epoch:
+            stop_early = True
+            break
+
+        # Skip posts outside our date window
+        if created > end_epoch:
+            continue
+
+        posts.append({
+            "id":           post.get("id", ""),
+            "subreddit":    subreddit,
+            "title":        post.get("title", ""),
+            "text":         post.get("selftext", "") or "",
+            "score":        post.get("score", 0),
+            "num_comments": post.get("num_comments", 0),
+            "created_utc":  created,
+            "query":        query,
+        })
+
+    if stop_early:
+        next_token = None  # don't paginate further, we've passed the window
+
+    return posts, next_token
+
+
+def scrape_subreddit_query(subreddit: str, query: str,
+                            start_epoch: int, end_epoch: int) -> list[dict]:
+    """Paginate through all results for one subreddit × query combination."""
+    all_posts = []
+    after_token = None
+
+    for page in range(MAX_PAGES):
+        posts, after_token = fetch_page(subreddit, query, after_token, start_epoch, end_epoch)
+        all_posts.extend(posts)
+        time.sleep(DELAY)
+
+        if not after_token or not posts:
+            break
+
+        log.debug(f"      page {page + 2}, {len(all_posts)} posts so far")
+
+    return all_posts
+
+
+def scrape_event(event_name: str, event_date, window_days: int = 7) -> pd.DataFrame:
     start_date, end_date = event_calendar_window(event_date, window_days)
-    start_epoch = _date_to_epoch(start_date)
-    end_epoch   = _date_to_epoch(end_date)
+    start_epoch = _epoch(start_date)
+    end_epoch   = _epoch(end_date)
 
-    log.info(f"[{event_name}]  window {start_date} → {end_date}")
+    log.info(f"[{event_name}]  {start_date} → {end_date}")
 
-    all_posts: dict[str, dict] = {}  # keyed by post ID for deduplication
+    seen_ids: set[str] = set()
+    all_posts: list[dict] = []
 
-    for subreddit_name in tqdm(SUBREDDITS, desc=f"{event_name} subreddits"):
-        subreddit = reddit.subreddit(subreddit_name)
-
+    for subreddit in SUBREDDITS:
+        log.info(f"  r/{subreddit}")
         for query in SEARCH_QUERIES:
-            try:
-                # Pass before/after directly to Reddit API via params dict.
-                # This is the most reliable way to get date-bounded results from PRAW.
-                results = subreddit.search(
-                    query,
-                    sort="relevance",
-                    time_filter="all",
-                    limit=limit_per_query,
-                    params={"before": end_epoch, "after": start_epoch},
-                )
+            posts = scrape_subreddit_query(subreddit, query, start_epoch, end_epoch)
+            for p in posts:
+                if p["id"] and p["id"] not in seen_ids:
+                    seen_ids.add(p["id"])
+                    p["event"] = event_name
+                    all_posts.append(p)
 
-                for post in results:
-                    if post.id in all_posts:
-                        continue
-                    created = post.created_utc
-                    if not (start_epoch <= created <= end_epoch):
-                        continue  # client-side date guard
-
-                    all_posts[post.id] = {
-                        "id":            post.id,
-                        "subreddit":     subreddit_name,
-                        "title":         post.title,
-                        "text":          post.selftext or "",
-                        "score":         post.score,
-                        "num_comments":  post.num_comments,
-                        "created_utc":   created,
-                        "query":         query,
-                        "event":         event_name,
-                    }
-
-            except Exception as e:
-                log.warning(f"  Error on r/{subreddit_name} query='{query}': {e}")
-                time.sleep(2)
+        log.info(f"    {len(all_posts)} unique posts so far")
 
     if not all_posts:
-        log.warning(f"[{event_name}]  No posts found — check credentials or date range")
+        log.warning(f"[{event_name}]  No posts found")
         return pd.DataFrame()
 
-    df = pd.DataFrame(all_posts.values())
+    df = pd.DataFrame(all_posts)
     df["date"] = pd.to_datetime(df["created_utc"], unit="s", utc=True).dt.date
-    df["combined_text"] = df["title"] + " " + df["text"]
-    df["combined_text"] = df["combined_text"].str.strip()
+    df["combined_text"] = (df["title"] + " " + df["text"]).str.strip()
 
-    log.info(f"[{event_name}]  {len(df)} unique posts collected")
+    log.info(f"[{event_name}]  Done — {len(df)} unique posts")
     return df
 
 
 def run_all():
-    reddit = build_reddit_client()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
     for event_name, event_date in EVENT_DATES.items():
         out_path = RAW_DIR / f"{event_name}.csv"
 
         if out_path.exists():
-            log.info(f"[{event_name}]  Already collected — skipping (delete file to re-run)")
+            existing = pd.read_csv(out_path)
+            log.info(f"[{event_name}]  Already collected ({len(existing)} posts) — delete file to re-run")
             continue
 
-        df = scrape_event(reddit, event_name, event_date)
+        df = scrape_event(event_name, event_date)
 
         if not df.empty:
             df.to_csv(out_path, index=False)
-            log.info(f"[{event_name}]  Saved to {out_path}")
+            log.info(f"[{event_name}]  Saved → {out_path}\n")
         else:
-            log.warning(f"[{event_name}]  Empty result — no file written")
+            log.warning(f"[{event_name}]  No data — no file written\n")
 
 
 if __name__ == "__main__":
