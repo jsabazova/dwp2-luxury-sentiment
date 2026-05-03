@@ -34,7 +34,7 @@ from pathlib import Path
 import requests
 import pandas as pd
 
-from utils import EVENT_DATES, SUBREDDITS, SEARCH_QUERIES, event_calendar_window
+from utils import EVENT_DATES, SUBREDDITS, EVENT_QUERY_MAP, event_calendar_window
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s")
 log = logging.getLogger(__name__)
@@ -152,9 +152,11 @@ def scrape_event(event_name: str, event_date, window_days: int = 7) -> pd.DataFr
     seen_ids: set[str] = set()
     all_posts: list[dict] = []
 
+    queries = EVENT_QUERY_MAP.get(event_name, list(EVENT_QUERY_MAP.values())[0])
+
     for subreddit in SUBREDDITS:
         log.info(f"  r/{subreddit}")
-        for query in SEARCH_QUERIES:
+        for query in queries:
             posts = scrape_subreddit_query(subreddit, query, start_epoch, end_epoch)
             for p in posts:
                 if p["id"] and p["id"] not in seen_ids:

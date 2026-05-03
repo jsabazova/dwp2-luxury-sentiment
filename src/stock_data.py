@@ -24,10 +24,10 @@ log = logging.getLogger(__name__)
 
 RAW_DIR = Path(__file__).parent.parent / "data" / "raw" / "stocks"
 
-# Download window: enough to cover all estimation windows + all event windows.
-# Earliest event is Nov 12 2025; estimation window starts 60 trading days before
-# that (~Aug 2025). Use a comfortable buffer.
-DOWNLOAD_START = "2025-07-01"
+# Download window: covers all events including the musical (Oct 2024).
+# Earliest event is musical_previews Oct 24 2024; estimation window starts
+# 60 trading days before that (~Jul 2024). Use a comfortable buffer.
+DOWNLOAD_START = "2024-07-01"
 DOWNLOAD_END   = date.today().isoformat()
 
 ALL_TICKERS = list(TICKERS.keys()) + ALL_BENCHMARKS

@@ -11,10 +11,17 @@ import numpy as np
 # ── Event dates ────────────────────────────────────────────────────────────────
 
 EVENT_DATES = {
-    "teaser_trailer":      date(2025, 11, 12),
-    "full_trailer":        date(2026,  2,  1),
-    "nyc_premiere":        date(2026,  4, 20),
-    "theatrical_release":  date(2026,  5,  1),
+    # ── Film events ────────────────────────────────────────────────────────────
+    "teaser_trailer":      date(2025, 11, 12),   # 181.5M views in 24hrs
+    "full_trailer":        date(2026,  2,  1),   # 222M views in 24hrs
+    "nyc_premiere":        date(2026,  4, 20),   # live-streamed globally
+    "theatrical_release":  date(2026,  5,  1),   # $115M opening weekend
+
+    # ── Musical events (West End, Dominion Theatre, London) ───────────────────
+    # Elton John music; Vanessa Williams as Miranda Priestly
+    "musical_previews":    date(2024, 10, 24),   # West End previews begin
+    "musical_opening":     date(2024, 12,  5),   # West End opening night
+    "musical_extension":   date(2026,  3, 13),   # run extended to Feb 2027
 }
 
 # ── Stock universe ─────────────────────────────────────────────────────────────
@@ -50,6 +57,8 @@ SUBREDDITS = [
     "boxoffice",
     "investing",
     "stocks",
+    "musicals",       # added for musical events
+    "westend",        # added for musical events
 ]
 
 SEARCH_QUERIES = [
@@ -58,6 +67,26 @@ SEARCH_QUERIES = [
     "miranda priestly",
     "runway magazine film",
 ]
+
+# Separate queries for musical events — broader to catch theatre discourse
+MUSICAL_QUERIES = [
+    "devil wears prada musical",
+    "devil wears prada west end",
+    "devil wears prada dominion theatre",
+    "prada musical elton john",
+    "miranda priestly musical",
+]
+
+# Which events use film queries vs musical queries
+EVENT_QUERY_MAP = {
+    "teaser_trailer":   SEARCH_QUERIES,
+    "full_trailer":     SEARCH_QUERIES,
+    "nyc_premiere":     SEARCH_QUERIES,
+    "theatrical_release": SEARCH_QUERIES,
+    "musical_previews": MUSICAL_QUERIES,
+    "musical_opening":  MUSICAL_QUERIES,
+    "musical_extension": MUSICAL_QUERIES,
+}
 
 # ── Event study windows ────────────────────────────────────────────────────────
 
