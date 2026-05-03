@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fashion Sentiment × Luxury Stocks — Methodology</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F7F3EE;
+    --ink: #1A1714;
+    --gold: #B5933A;
+    --gold-light: #D4AE6A;
+    --muted: #8C7E6E;
+    --rule: #C9BFB0;
+    --blush: #E8DDD4;
+    --sage: #7A9080;
+    --slate: #4A5568;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--cream);
+    font-family: 'EB Garamond', Georgia, serif;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 60px 40px;
+  }
+
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* ── MASTHEAD ── */
+  .masthead {
+    text-align: center;
+    margin-bottom: 64px;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .masthead-rule {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .masthead-rule hr {
+    flex: 1;
+    border: none;
+    border-top: 1px solid var(--gold);
+  }
+
+  .masthead-rule span {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  .masthead h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+
+  .masthead h1 em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .masthead .sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* ── SECTION HEADERS ── */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+    margin-top: 72px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .section-label .num {
+    font-family: 'Playfair Display', serif;
+    font-size: 48px;
+    font-weight: 400;
+    color: var(--rule);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .section-label .text {
+    border-left: 2px solid var(--gold);
+    padding-left: 14px;
+  }
+
+  .section-label .text h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .section-label .text p {
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 2px;
+  }
+
+  /* ── PIPELINE DIAGRAM ── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    animation: fadeUp 0.7s ease 0.1s both;
+  }
+
+  .pipeline-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .pipeline-row.indent {
+    padding-left: 60px;
+  }
+
+  .pipeline-node {
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 20px 24px;
+    flex: 1;
+    position: relative;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .pipeline-node:hover {
+    border-color: var(--gold-light);
+    box-shadow: 0 4px 24px rgba(181,147,58,0.08);
+  }
+
+  .pipeline-node.accent {
+    border-color: var(--gold);
+    background: linear-gradient(135deg, #FFFDF9 0%, #FFF8EE 100%);
+  }
+
+  .pipeline-node.split {
+    flex: 1;
+  }
+
+  .node-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+
+  .node-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .node-detail {
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  .node-code {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--sage);
+    margin-top: 8px;
+    background: var(--blush);
+    padding: 4px 8px;
+    display: inline-block;
+  }
+
+  /* connectors */
+  .connector-v {
+    width: 1px;
+    background: var(--rule);
+    margin: 0 auto;
+    height: 32px;
+    position: relative;
+  }
+
+  .connector-v::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: -4px;
+    width: 9px;
+    height: 9px;
+    border-right: 1px solid var(--gold);
+    border-bottom: 1px solid var(--gold);
+    transform: rotate(45deg);
+  }
+
+  .connector-h {
+    width: 24px;
+    background: var(--rule);
+    height: 1px;
+    align-self: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .connector-h::after {
+    content: '';
+    position: absolute;
+    right: -5px;
+    top: -4px;
+    width: 9px;
+    height: 9px;
+    border-right: 1px solid var(--gold);
+    border-bottom: 1px solid var(--gold);
+    transform: rotate(-45deg);
+  }
+
+  .split-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .split-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    text-align: center;
+    padding: 6px 0;
+    border-top: 1px dashed var(--rule);
+    border-bottom: 1px dashed var(--rule);
+    margin: 4px 0;
+  }
+
+  /* ── EVENT STUDY ── */
+  .event-study {
+    animation: fadeUp 0.7s ease 0.15s both;
+  }
+
+  .timeline-container {
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 40px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .timeline-container::before {
+    content: 'EVENT STUDY FRAMEWORK';
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--rule);
+    position: absolute;
+    top: 16px;
+    right: 24px;
+  }
+
+  /* Timeline axis */
+  .timeline-axis {
+    position: relative;
+    height: 2px;
+    background: var(--ink);
+    margin: 48px 0 80px;
+  }
+
+  .timeline-axis::after {
+    content: 't';
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 18px;
+    position: absolute;
+    right: -24px;
+    top: -12px;
+    color: var(--ink);
+  }
+
+  /* Windows */
+  .window {
+    position: absolute;
+    top: -32px;
+    height: 66px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .window-bar {
+    height: 2px;
+    width: 100%;
+  }
+
+  .window-fill {
+    position: absolute;
+    top: 2px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.07;
+  }
+
+  .window-label {
+    position: absolute;
+    top: -26px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .estimation-window {
+    left: 0%;
+    width: 45%;
+  }
+  .estimation-window .window-bar { background: var(--muted); }
+  .estimation-window .window-fill { background: var(--muted); }
+  .estimation-window .window-label { color: var(--muted); }
+
+  .event-window {
+    left: 52%;
+    width: 30%;
+  }
+  .event-window .window-bar { background: var(--gold); }
+  .event-window .window-fill { background: var(--gold); }
+  .event-window .window-label { color: var(--gold); }
+
+  /* Tick marks */
+  .tick {
+    position: absolute;
+    top: -8px;
+    width: 1px;
+    height: 18px;
+    background: var(--ink);
+  }
+
+  .tick-label {
+    position: absolute;
+    top: 14px;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .tick-sub {
+    position: absolute;
+    top: 28px;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-style: italic;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .tick.event-tick {
+    background: var(--gold);
+    width: 2px;
+    height: 22px;
+    top: -10px;
+  }
+
+  .event-star {
+    position: absolute;
+    top: -28px;
+    transform: translateX(-50%);
+    font-size: 16px;
+    color: var(--gold);
+  }
+
+  /* Formula row */
+  .formula-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-top: 16px;
+  }
+
+  .formula-cell {
+    background: var(--cream);
+    padding: 18px 20px;
+    text-align: center;
+  }
+
+  .formula-cell .f-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .formula-cell .f-eq {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  .formula-cell .f-eq .var {
+    color: var(--gold);
+  }
+
+  /* Events legend */
+  .events-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-top: 32px;
+    animation: fadeUp 0.7s ease 0.2s both;
+  }
+
+  .event-card {
+    background: white;
+    padding: 20px 18px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+
+  .event-card:hover { background: #FFFDF9; }
+
+  .event-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--gold);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .event-card:hover::before { opacity: 1; }
+
+  .event-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    font-weight: 400;
+    color: var(--rule);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .event-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .event-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .event-views {
+    font-size: 12px;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* Footer rule */
+  .footer-rule {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 64px;
+    animation: fadeUp 0.6s ease 0.3s both;
+  }
+
+  .footer-rule hr {
+    flex: 1;
+    border: none;
+    border-top: 1px solid var(--rule);
+  }
+
+  .footer-rule span {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .pipeline-row { animation: fadeUp 0.5s ease both; }
+  .pipeline-row:nth-child(1) { animation-delay: 0.05s; }
+  .pipeline-row:nth-child(2) { animation-delay: 0.10s; }
+  .pipeline-row:nth-child(3) { animation-delay: 0.15s; }
+  .pipeline-row:nth-child(4) { animation-delay: 0.20s; }
+  .pipeline-row:nth-child(5) { animation-delay: 0.25s; }
+  .pipeline-row:nth-child(6) { animation-delay: 0.30s; }
+  .pipeline-row:nth-child(7) { animation-delay: 0.35s; }
+
+  .event-card { animation: fadeUp 0.5s ease both; }
+  .event-card:nth-child(1) { animation-delay: 0.25s; }
+  .event-card:nth-child(2) { animation-delay: 0.30s; }
+  .event-card:nth-child(3) { animation-delay: 0.35s; }
+  .event-card:nth-child(4) { animation-delay: 0.40s; }
+
+  @media (max-width: 600px) {
+    body { padding: 32px 20px; }
+    .events-grid { grid-template-columns: 1fr 1fr; }
+    .formula-row { grid-template-columns: 1fr; }
+    .timeline-container { padding: 24px 20px; }
+    .pipeline-row.indent { padding-left: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <div class="masthead">
+    <div class="masthead-rule">
+      <hr>
+      <span>Methodology</span>
+      <hr>
+    </div>
+    <h1>Fashion Sentiment<br><em>&amp; Luxury Equities</em></h1>
+    <p class="sub">Devil Wears Prada 2 · Event Study · 2026</p>
+  </div>
+
+  <!-- DIAGRAM 1: PIPELINE -->
+  <div class="section-label">
+    <div class="num">I.</div>
+    <div class="text">
+      <h2>The Sentiment Pipeline</h2>
+      <p>From social media signal to abnormal return</p>
+    </div>
+  </div>
+
+  <div class="pipeline">
+
+    <!-- Node 1 -->
+    <div class="pipeline-row">
+      <div class="pipeline-node accent">
+        <div class="node-tag">Data Source</div>
+        <div class="node-title">Reddit via PRAW</div>
+        <div class="node-detail">r/fashion · r/movies · r/investing · r/LVMH<br>±7 days around each event · weighted by upvotes</div>
+        <div class="node-code">praw.Reddit(...).subreddit(name).search(query)</div>
+      </div>
+    </div>
+
+    <div class="connector-v" style="margin-left: 50%; width:1px;"></div>
+
+    <!-- Node 2: Split -->
+    <div class="pipeline-row">
+      <div class="pipeline-node" style="flex:0 0 48%; margin-right:4%;">
+        <div class="node-tag">Model A · Finance Domain</div>
+        <div class="node-title">FinBERT</div>
+        <div class="node-detail">ProsusAI · fine-tuned on financial text<br>Returns positive / neutral / negative + confidence</div>
+        <div class="node-code">pipeline("sentiment-analysis", model="finbert")</div>
+      </div>
+      <div class="pipeline-node" style="flex:0 0 48%;">
+        <div class="node-tag">Model B · Social Domain</div>
+        <div class="node-title">VADER</div>
+        <div class="node-detail">Lexicon-based · optimised for social media language<br>Compound score ∈ [−1, 1]</div>
+        <div class="node-code">SentimentIntensityAnalyzer().polarity_scores()</div>
+      </div>
+    </div>
+
+    <div class="connector-v" style="margin-left: 50%; width:1px;"></div>
+
+    <!-- Node 3 -->
+    <div class="pipeline-row">
+      <div class="pipeline-node">
+        <div class="node-tag">Aggregation</div>
+        <div class="node-title">Weighted Daily Sentiment Score</div>
+        <div class="node-detail">Each post weighted by upvote score · daily average per subreddit · lag series at t−1 and t−2</div>
+        <div class="node-code">Σ(sentiment × upvotes) / Σ(upvotes) per day</div>
+      </div>
+    </div>
+
+    <div class="connector-v" style="margin-left: 50%; width:1px;"></div>
+
+    <!-- Node 4 -->
+    <div class="pipeline-row">
+      <div class="pipeline-node accent">
+        <div class="node-tag">Stock Universe · 6 Tickers · 3 Exchanges</div>
+        <div class="node-title">yfinance Price Data</div>
+        <div class="node-detail">
+          1913.HK &nbsp;·&nbsp; MC.PA &nbsp;·&nbsp; KER.PA &nbsp;·&nbsp; CPRI &nbsp;·&nbsp; TPR &nbsp;·&nbsp; EL<br>
+          Benchmarks: S&amp;P 500 · STOXX 600 · Hang Seng
+        </div>
+        <div class="node-code">yf.download(tickers, start, end, auto_adjust=True)</div>
+      </div>
+    </div>
+
+    <div class="connector-v" style="margin-left: 50%; width:1px;"></div>
+
+    <!-- Node 5 -->
+    <div class="pipeline-row">
+      <div class="pipeline-node">
+        <div class="node-tag">Event Study</div>
+        <div class="node-title">Cumulative Abnormal Returns</div>
+        <div class="node-detail">Estimation window [−60, −10] · Event window [−2, +5] trading days · CAPM market model</div>
+        <div class="node-code">CAR = Σ(actual return − expected return)</div>
+      </div>
+    </div>
+
+    <div class="connector-v" style="margin-left: 50%; width:1px;"></div>
+
+    <!-- Node 6: Result -->
+    <div class="pipeline-row">
+      <div class="pipeline-node accent">
+        <div class="node-tag">Key Test</div>
+        <div class="node-title">Lag Correlation</div>
+        <div class="node-detail">Does t−1 or t−2 sentiment predict t abnormal return? Pearson + Spearman across four event windows.</div>
+        <div class="node-code">pearsonr(sentiment.shift(lag), abnormal_returns)</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DIAGRAM 2: EVENT STUDY -->
+  <div class="section-label" style="margin-top: 80px;">
+    <div class="num">II.</div>
+    <div class="text">
+      <h2>Event Study Framework</h2>
+      <p>Four natural experiments with clean timestamps</p>
+    </div>
+  </div>
+
+  <div class="event-study">
+
+    <div class="timeline-container">
+
+      <!-- Timeline -->
+      <div class="timeline-axis">
+
+        <!-- Estimation window -->
+        <div class="window estimation-window">
+          <div class="window-label">Estimation Window</div>
+          <div class="window-bar"></div>
+          <div class="window-fill"></div>
+        </div>
+
+        <!-- Event window -->
+        <div class="window event-window">
+          <div class="window-label">Event Window</div>
+          <div class="window-bar"></div>
+          <div class="window-fill"></div>
+        </div>
+
+        <!-- Ticks -->
+        <div class="tick" style="left:0%;">
+          <div class="tick-label">t−60</div>
+        </div>
+        <div class="tick" style="left:45%;">
+          <div class="tick-label">t−10</div>
+        </div>
+        <div class="tick" style="left:52%;">
+          <div class="tick-label">t−2</div>
+        </div>
+        <div class="tick event-tick" style="left:60%;">
+          <div class="event-star">★</div>
+          <div class="tick-label" style="color: var(--gold); font-weight:500;">t₀</div>
+          <div class="tick-sub">Event</div>
+        </div>
+        <div class="tick" style="left:82%;">
+          <div class="tick-label">t+5</div>
+        </div>
+        <div class="tick" style="left:100%;">
+        </div>
+
+      </div>
+
+      <!-- Formulas -->
+      <div class="formula-row">
+        <div class="formula-cell">
+          <div class="f-label">Normal Return (CAPM)</div>
+          <div class="f-eq"><span class="var">E[R]</span> = α + β · <span class="var">R<sub>market</sub></span></div>
+        </div>
+        <div class="formula-cell">
+          <div class="f-label">Abnormal Return</div>
+          <div class="f-eq"><span class="var">AR<sub>t</sub></span> = R<sub>t</sub> − <span class="var">E[R<sub>t</sub>]</span></div>
+        </div>
+        <div class="formula-cell">
+          <div class="f-label">Cumulative Abnormal Return</div>
+          <div class="f-eq"><span class="var">CAR</span> = Σ <span class="var">AR<sub>t</sub></span> over window</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Four events -->
+    <div class="events-grid">
+      <div class="event-card">
+        <div class="event-num">01</div>
+        <div class="event-date">Nov 12, 2025</div>
+        <div class="event-name">Teaser Trailer</div>
+        <div class="event-views">181.5M views · 24hrs</div>
+      </div>
+      <div class="event-card">
+        <div class="event-num">02</div>
+        <div class="event-date">Feb 1, 2026</div>
+        <div class="event-name">Full Trailer</div>
+        <div class="event-views">222M views · 24hrs</div>
+      </div>
+      <div class="event-card">
+        <div class="event-num">03</div>
+        <div class="event-date">Apr 20, 2026</div>
+        <div class="event-name">NYC Premiere</div>
+        <div class="event-views">Live-streamed globally</div>
+      </div>
+      <div class="event-card">
+        <div class="event-num">04</div>
+        <div class="event-date">May 1, 2026</div>
+        <div class="event-name">Theatrical Release</div>
+        <div class="event-views">$115M worldwide · wk 1</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-rule">
+    <hr>
+    <span>github.com/jsabazova/dwp2-luxury-sentiment</span>
+    <hr>
+  </div>
+
+</div>
+</body>
+</html>
