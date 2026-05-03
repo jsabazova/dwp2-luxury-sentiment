@@ -1,17 +1,15 @@
 """
-Sentiment scoring: runs VADER and FinBERT on collected Reddit posts,
-then aggregates to daily weighted sentiment scores per event.
+Sentiment scoring: VADER (always runs) + FinBERT (optional, skipped if unavailable).
 
 Usage:
     python src/sentiment.py
 
 Inputs:  data/raw/reddit/{event_name}.csv
 Outputs: data/processed/sentiment_scores.csv
+         data/processed/{event_name}_scored_posts.csv
 
-Performance note:
-    VADER is instant. FinBERT is slow (~2–5 min per 1000 posts on CPU).
-    If you have a GPU, it will use it automatically via PyTorch.
-    Expect 15–30 min total for all events on CPU.
+FinBERT is disabled automatically if torch/transformers are incompatible.
+VADER alone is sufficient for analysis — it performs well on social media text.
 """
 
 from __future__ import annotations
@@ -20,7 +18,6 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-import numpy as np
 from tqdm import tqdm
 
 from utils import EVENT_DATES
@@ -33,6 +30,17 @@ PROCESSED_DIR = Path(__file__).parent.parent / "data" / "processed"
 
 FINBERT_MODEL = "ProsusAI/finbert"
 BATCH_SIZE    = 32
+
+# ── Check FinBERT availability once at startup ─────────────────────────────────
+
+FINBERT_AVAILABLE = False
+try:
+    import torch
+    from transformers import pipeline as hf_pipeline
+    FINBERT_AVAILABLE = True
+    log.info("FinBERT available — will run both VADER and FinBERT")
+except Exception as e:
+    log.warning(f"FinBERT not available ({e}) — running VADER only")
 
 
 # ── VADER ──────────────────────────────────────────────────────────────────────
@@ -47,12 +55,12 @@ def score_vader(texts: pd.Series) -> pd.Series:
 
 def score_finbert(texts: pd.Series) -> pd.Series:
     import torch
-    from transformers import pipeline
+    from transformers import pipeline as hf_pipeline
 
     device = 0 if torch.cuda.is_available() else -1
-    log.info(f"FinBERT running on {'GPU' if device == 0 else 'CPU'}")
+    log.info(f"  FinBERT on {'GPU' if device == 0 else 'CPU'}")
 
-    pipe = pipeline(
+    pipe = hf_pipeline(
         "sentiment-analysis",
         model=FINBERT_MODEL,
         tokenizer=FINBERT_MODEL,
@@ -65,13 +73,9 @@ def score_finbert(texts: pd.Series) -> pd.Series:
     results = []
 
     for i in tqdm(range(0, len(texts), BATCH_SIZE), desc="FinBERT"):
-        batch = texts.iloc[i : i + BATCH_SIZE].tolist()
-        # Truncate each text to avoid tokenizer warnings
-        batch = [str(t)[:1000] for t in batch]
-        outputs = pipe(batch)
-        for out in outputs:
-            score = label_map.get(out["label"].lower(), 0.0) * out["score"]
-            results.append(score)
+        batch = [str(t)[:1000] for t in texts.iloc[i : i + BATCH_SIZE].tolist()]
+        for out in pipe(batch):
+            results.append(label_map.get(out["label"].lower(), 0.0) * out["score"])
 
     return pd.Series(results, index=texts.index)
 
@@ -79,10 +83,6 @@ def score_finbert(texts: pd.Series) -> pd.Series:
 # ── Aggregation ────────────────────────────────────────────────────────────────
 
 def weighted_daily_sentiment(df: pd.DataFrame, score_col: str) -> pd.DataFrame:
-    """
-    Compute upvote-weighted daily average sentiment.
-    Posts with score <= 0 are given a weight of 1 to avoid zero-weighting.
-    """
     df = df.copy()
     df["weight"] = df["score"].clip(lower=1)
     df["weighted_score"] = df[score_col] * df["weight"]
@@ -104,36 +104,38 @@ def weighted_daily_sentiment(df: pd.DataFrame, score_col: str) -> pd.DataFrame:
 def score_event(event_name: str) -> pd.DataFrame | None:
     path = RAW_DIR / f"{event_name}.csv"
     if not path.exists():
-        log.warning(f"[{event_name}]  No data file found at {path} — run reddit_scraper.py first")
+        log.warning(f"[{event_name}]  No data file — run reddit_scraper.py first")
         return None
 
     df = pd.read_csv(path, parse_dates=["date"])
     df["date"] = pd.to_datetime(df["date"]).dt.date
-    log.info(f"[{event_name}]  Loaded {len(df)} posts")
+    log.info(f"[{event_name}]  {len(df)} posts")
 
-    # VADER
+    # VADER (always)
     log.info(f"[{event_name}]  Running VADER...")
     df["vader"] = score_vader(df["combined_text"])
 
-    # FinBERT
-    log.info(f"[{event_name}]  Running FinBERT...")
-    df["finbert"] = score_finbert(df["combined_text"])
+    # FinBERT (optional)
+    if FINBERT_AVAILABLE:
+        log.info(f"[{event_name}]  Running FinBERT...")
+        df["finbert"] = score_finbert(df["combined_text"])
+    else:
+        df["finbert"] = float("nan")
 
-    # Save scored posts (useful for debugging model disagreement)
-    scored_path = PROCESSED_DIR / f"{event_name}_scored_posts.csv"
-    df.to_csv(scored_path, index=False)
-    log.info(f"[{event_name}]  Scored posts saved to {scored_path}")
+    # Save scored posts
+    df.to_csv(PROCESSED_DIR / f"{event_name}_scored_posts.csv", index=False)
 
     # Aggregate to daily
-    vader_daily   = weighted_daily_sentiment(df, "vader")
-    finbert_daily = weighted_daily_sentiment(df, "finbert")
+    vader_daily = weighted_daily_sentiment(df, "vader")
 
-    daily = vader_daily.merge(
-        finbert_daily[["date", "finbert_weighted"]],
-        on="date"
-    )
+    if FINBERT_AVAILABLE:
+        finbert_daily = weighted_daily_sentiment(df, "finbert")
+        daily = vader_daily.merge(finbert_daily[["date", "finbert_weighted"]], on="date")
+    else:
+        daily = vader_daily.copy()
+        daily["finbert_weighted"] = float("nan")
+
     daily["event"] = event_name
-
     return daily
 
 
@@ -147,16 +149,16 @@ def run():
             all_daily.append(result)
 
     if not all_daily:
-        log.error("No events scored — check that Reddit data exists in data/raw/reddit/")
+        log.error("No events scored — check data/raw/reddit/")
         return
 
-    combined = pd.concat(all_daily, ignore_index=True)
-    combined = combined.sort_values(["event", "date"])
-
+    combined = pd.concat(all_daily, ignore_index=True).sort_values(["event", "date"])
     out_path = PROCESSED_DIR / "sentiment_scores.csv"
     combined.to_csv(out_path, index=False)
-    log.info(f"Sentiment scores saved to {out_path}")
-    log.info(f"\n{combined.groupby('event')[['vader_weighted','finbert_weighted']].describe()}")
+    log.info(f"\nSaved → {out_path}")
+
+    summary = combined.groupby("event")[["vader_weighted", "finbert_weighted"]].agg(["mean", "std"]).round(3)
+    log.info(f"\n{summary}")
 
 
 if __name__ == "__main__":
