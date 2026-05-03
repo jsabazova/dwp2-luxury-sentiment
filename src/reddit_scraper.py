@@ -69,11 +69,21 @@ def fetch_page(subreddit: str, query: str, after_token: str | None,
 
     url = f"{BASE_URL}/r/{subreddit}/search.json"
 
-    try:
-        resp = requests.get(url, headers=HEADERS, params=params, timeout=15)
-        resp.raise_for_status()
-    except requests.RequestException as e:
-        log.warning(f"    Request failed: {e}")
+    for attempt in range(4):
+        try:
+            resp = requests.get(url, headers=HEADERS, params=params, timeout=15)
+            if resp.status_code == 429:
+                wait = 30 * (2 ** attempt)  # 30s, 60s, 120s, 240s
+                log.warning(f"    Rate limited — waiting {wait}s before retry")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            break
+        except requests.RequestException as e:
+            log.warning(f"    Request failed: {e}")
+            return [], None
+    else:
+        log.warning("    Max retries hit, skipping this query")
         return [], None
 
     data = resp.json().get("data", {})
