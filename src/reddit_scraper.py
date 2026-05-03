@@ -24,6 +24,8 @@ Notes on historical data:
     Apr/May 2026 events will have the most complete coverage.
 """
 
+from __future__ import annotations
+
 import time
 import logging
 from datetime import datetime, timezone

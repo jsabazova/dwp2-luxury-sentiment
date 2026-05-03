@@ -17,6 +17,8 @@ Methodology:
     - CAR:               cumulative sum of AR_t over event window
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 

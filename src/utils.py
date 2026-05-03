@@ -2,6 +2,8 @@
 Shared constants and helpers used across all modules.
 """
 
+from __future__ import annotations
+
 from datetime import date, timedelta
 import pandas as pd
 import numpy as np

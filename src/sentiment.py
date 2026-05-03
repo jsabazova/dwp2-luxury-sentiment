@@ -14,6 +14,8 @@ Performance note:
     Expect 15–30 min total for all events on CPU.
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 
