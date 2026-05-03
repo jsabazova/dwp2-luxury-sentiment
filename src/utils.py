@@ -57,8 +57,7 @@ SUBREDDITS = [
     "boxoffice",
     "investing",
     "stocks",
-    "musicals",       # added for musical events
-    "westend",        # added for musical events
+    "musicals",
 ]
 
 SEARCH_QUERIES = [
