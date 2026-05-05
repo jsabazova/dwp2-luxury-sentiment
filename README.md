@@ -1,338 +1,225 @@
-# 🎬 Devil Wears Prada 2: Fashion Sentiment & Luxury Stock Analysis
+# Devil Wears Prada 2: Fashion Sentiment & Luxury Stock Analysis
 
-> *Does a fashion film move luxury stock prices — even when it has no financial stake in the brands it references?*
+> *Does a cultural event move luxury stock prices — even when the brands have no financial stake in it?*
 
-This project uses NLP sentiment analysis on social media data to examine whether the cultural hype around **The Devil Wears Prada 2** (released May 1, 2026) produced measurable short-term price effects on luxury fashion stocks — despite the film having no direct financial relationship with Prada S.p.A. or any other luxury house.
+This project applies **event study methodology** and **multi-source NLP sentiment analysis** to nine events surrounding *The Devil Wears Prada 2* (film, May 2026) and its companion West End musical (Oct 2024–present), testing whether measurable public sentiment predicts short-term abnormal returns across seven luxury equity tickers.
 
----
-
-## 📌 Research Question
-
-**Can sentiment derived from social media predict abnormal returns in luxury fashion equities around a high-profile fashion cultural event?**
-
-Sub-questions:
-- Does sentiment *lead* price movement, and by how many days?
-- Which event window (trailer drop vs. premiere vs. release) produces the strongest signal?
-- Is the effect concentrated in directly-referenced brands or does it spill over to the luxury sector broadly?
+**→ Full write-up:** [`ANALYSIS_WRITEUP.md`](ANALYSIS_WRITEUP.md)
+**→ Methodology explained:** [`METHODOLOGY.md`](METHODOLOGY.md)
+**→ All findings by indicator:** [`ANALYSIS_RESULTS.md`](ANALYSIS_RESULTS.md)
 
 ---
 
-## 🎯 Hypothesis
+## Key Findings
 
-A fashion-coded cultural event generates elevated positive sentiment toward luxury goods broadly. This sentiment shift is detectable in social media data and precedes (or coincides with) short-term abnormal returns in luxury fashion equities — even in the absence of any direct financial relationship between the film and the brands.
-
-**Null hypothesis:** Sentiment around the film has no statistically significant relationship with luxury stock returns in the event windows studied.
-
----
-
-## 📅 Event Windows
-
-The film provides four clean, timestamped sentiment events — ideal for event-driven analysis:
-
-| Event | Date | Notes |
-|---|---|---|
-| Teaser trailer | Nov 12, 2025 | 181.5M views in 24hrs — most-viewed comedy trailer in 15 years |
-| Full trailer | Feb 1, 2026 | 222M views in 24hrs — most-viewed trailer in 20th Century Studios history |
-| NYC Premiere | Apr 20, 2026 | Live-streamed on Disney+ and Hulu |
-| Theatrical release | May 1, 2026 | US opening weekend |
-
-For each event, the analysis window is **[-2, +5] trading days** around the event date.
+- **Hermès +5.1% CAR** at West End musical previews, p=0.0037 (\*\*\*)
+- **LVMH +5.5% CAR** at West End musical previews, p=0.038 (\*\*)
+- **LVMH and Hermès** show statistically significant same-day correlation with Reddit sentiment (p<0.05)
+- **Audience vs. critic divergence:** YouTube audiences are positive about the film (+0.31); Guardian critics are negative (−0.08 to −0.19); both agree the musical was excellent (+0.73–0.92)
+- **Reddit IC = 0.14** — in the upper range of commercial alternative data benchmarks, not significant at n=52
+- Film events (trailers, premiere, theatrical release) produced **no statistically significant CARs**, partly due to high-VIX market conditions during spring 2026
 
 ---
 
-## 📈 Stock Universe
+## Research Question
+
+**Can sentiment derived from social media and press data predict abnormal returns in luxury fashion equities around a high-profile cultural event?**
+
+Prada S.p.A. has no financial stake in the film — no licensing deal, no royalties. Any measurable stock price effect is therefore entirely sentiment-driven, making the causal chain cleaner to reason about than a typical earnings event study.
+
+---
+
+## Events (9 total)
+
+| Event | Date | Category |
+|-------|------|----------|
+| West End previews begin | Oct 24, 2024 | Musical |
+| West End opening night | Dec 5, 2024 | Musical |
+| Prada SS26 womenswear show, Milan | Sep 18, 2025 | Fashion Week |
+| Teaser trailer (181.5M views / 24hrs) | Nov 12, 2025 | Film |
+| Full trailer (222M views / 24hrs) | Feb 1, 2026 | Film |
+| Prada FW26 womenswear show, Milan | Feb 20, 2026 | Fashion Week |
+| Run extended to Feb 2027 | Mar 13, 2026 | Musical |
+| NYC premiere, live-streamed globally | Apr 20, 2026 | Film |
+| Theatrical release ($115M opening weekend) | May 1, 2026 | Film |
+
+---
+
+## Stock Universe (7 tickers)
 
 | Ticker | Exchange | Company | Relevance |
-|---|---|---|---|
-| `1913.HK` | HKEx | Prada S.p.A. | Film named after brand |
-| `MC.PA` | Euronext Paris | LVMH | Owns Dior (featured in original film); largest luxury conglomerate |
+|--------|----------|---------|-----------|
+| `1913.HK` | HKEx | Prada S.p.A. | Film named after the brand |
+| `MC.PA` | Euronext Paris | LVMH | Owns Dior; largest luxury conglomerate |
 | `KER.PA` | Euronext Paris | Kering | Owns Gucci, Saint Laurent, Balenciaga |
-| `CPRI` | NYSE | Capri Holdings | Owns Versace (Donatella Versace cameo in film) |
-| `TPR` | NYSE | Tapestry | Owns Coach — accessible luxury benchmark |
-| `EL` | NYSE | Estée Lauder | Beauty/fashion adjacent; control stock |
+| `RMS.PA` | Euronext Paris | Hermès | Ultra-luxury benchmark; no direct connection |
+| `CPRI` | NYSE | Capri Holdings | Owns Versace; Donatella cameo in film |
+| `TPR` | NYSE | Tapestry | Owns Coach; accessible luxury control |
+| `EL` | NYSE | Estée Lauder | Beauty/fashion-adjacent; macro control |
 
-**Note on Prada:** Prada has no financial stake in the film. Any correlation is purely a cultural sentiment effect — which is the analytically interesting finding either way.
+**Reference tickers (context only):** `LUXE` (Roundhill Luxury ETF), `^VIX`
 
 ---
 
-## 🗂️ Project Structure
+## Data Sources
+
+| Source | Volume | Auth Required |
+|--------|--------|--------------|
+| Reddit | 308 posts, 9 events, 8 subreddits | None — public JSON API |
+| YouTube | 3,141 comments, 41 videos | YouTube Data API v3 key |
+| Guardian | 272 articles | Guardian Open Platform key (free) |
+| Stocks + VIX | 475 trading days, Jul 2024–May 2026 | None — yfinance |
+
+---
+
+## Project Structure
 
 ```
-dwp2-fashion-sentiment/
+dwp2-luxury-sentiment/
+│
+├── src/
+│   ├── utils.py              # Shared constants, event dates, tickers, helpers
+│   ├── reddit_scraper.py     # Reddit public JSON API (no credentials)
+│   ├── guardian_scraper.py   # Guardian Open Platform API
+│   ├── youtube_scraper.py    # YouTube Data API v3
+│   ├── trends_scraper.py     # Google Trends via pytrends
+│   ├── stock_data.py         # yfinance downloader
+│   ├── sentiment.py          # VADER scoring + daily aggregation
+│   └── event_study.py        # CAPM market model + CAR computation
+│
+├── notebooks/
+│   ├── 01_data_collection.ipynb       # Data sanity checks + post volume plots
+│   ├── 02_sentiment_analysis.ipynb    # Sentiment time series + distributions
+│   ├── 03_stock_returns.ipynb         # Return EDA + correlation matrix
+│   ├── 04_event_study.ipynb           # CAR computation + t-tests
+│   ├── 05_results_visualisation.ipynb # All publication-quality figures
+│   └── 06_signal_ic_vix_backtest.ipynb # IC, VIX regime, sector alpha, backtest
 │
 ├── data/
 │   ├── raw/
-│   │   ├── reddit/          # Raw Reddit JSON from PRAW
-│   │   └── stocks/          # Raw OHLCV data from yfinance
-│   ├── processed/
-│   │   ├── sentiment_scores.csv
-│   │   └── stock_returns.csv
-│   └── README.md            # Data dictionary
-│
-├── notebooks/
-│   ├── 01_data_collection.ipynb
-│   ├── 02_sentiment_analysis.ipynb
-│   ├── 03_stock_returns.ipynb
-│   ├── 04_event_study.ipynb
-│   └── 05_results_visualisation.ipynb
-│
-├── src/
-│   ├── reddit_scraper.py
-│   ├── sentiment.py
-│   ├── stock_data.py
-│   ├── event_study.py
-│   └── utils.py
+│   │   ├── reddit/           # Per-event post CSVs
+│   │   ├── youtube/          # comments.csv
+│   │   ├── guardian/         # articles.csv
+│   │   └── stocks/           # prices.csv, returns.csv
+│   └── processed/            # Scored sentiment + CAR results
 │
 ├── results/
-│   ├── figures/
-│   └── tables/
+│   ├── figures/              # 14 PNG figures
+│   └── tables/               # car_summary_formatted.csv, IC table, lag correlation
 │
+├── ANALYSIS_WRITEUP.md       # Full research note with all results
+├── ANALYSIS_RESULTS.md       # Brain dump — every finding by source/indicator
+├── METHODOLOGY.md            # Educational breakdown of every technique
 ├── requirements.txt
-├── .env.example
 └── README.md
 ```
 
 ---
 
-## 🛠️ Methodology
+## Methodology Summary
 
-### 1. Sentiment Data Collection
+**Event study:** CAPM market model with estimation window [−60, −10] trading days and event window [−2, +5] trading days. Abnormal returns tested with one-sample t-test (H₀: mean AR = 0).
 
-**Source:** Reddit (free, no rate-limiting issues unlike X/Twitter API)
+**Sentiment:** VADER compound score (calibrated for social media text), upvote/like-weighted daily aggregation.
 
-**Target subreddits:**
-- `r/fashion`, `r/femalefashionadvice`, `r/malefashionadvice`
-- `r/movies`, `r/boxoffice`
-- `r/investing`, `r/stocks` (for market reaction commentary)
-- `r/LVMH`, `r/Prada` (brand-specific)
+**Signal analysis:** Information Coefficient (IC = Pearson correlation between sentiment at t-1 and abnormal return at t), lag correlation across [0, 1, 2] day lags, VIX regime analysis, sector control via LUXE ETF alpha.
 
-**Tool:** PRAW (Python Reddit API Wrapper)
+**Backtest:** Naive long/short basket (Prada + LVMH + Kering) triggered by sign of Reddit sentiment before each event. Proof-of-concept only — 9 events is insufficient for a statistically meaningful Sharpe estimate.
 
-**Collection window:** 7 days before and after each event date
-
-```python
-import praw
-import pandas as pd
-
-reddit = praw.Reddit(
-    client_id=os.getenv("REDDIT_CLIENT_ID"),
-    client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
-    user_agent="dwp2-sentiment-analysis"
-)
-
-def scrape_subreddit(subreddit_name, query, start_date, end_date, limit=500):
-    subreddit = reddit.subreddit(subreddit_name)
-    posts = []
-    for post in subreddit.search(query, time_filter="month", limit=limit):
-        posts.append({
-            "title": post.title,
-            "text": post.selftext,
-            "score": post.score,
-            "created_utc": post.created_utc,
-            "num_comments": post.num_comments
-        })
-    return pd.DataFrame(posts)
-```
-
-**Search queries:** `"devil wears prada"`, `"devil wears prada 2"`, `"prada film"`, `"runway magazine film"`, `"miranda priestly"`
+See [`METHODOLOGY.md`](METHODOLOGY.md) for a full educational breakdown.
 
 ---
 
-### 2. Sentiment Scoring
+## Quickstart
 
-Two models are run in parallel and compared:
-
-#### FinBERT (finance-tuned BERT)
-Best for: posts discussing stocks, returns, brand valuation, market reaction
-
-```python
-from transformers import BertTokenizer, BertForSequenceClassification
-from transformers import pipeline
-
-tokenizer = BertTokenizer.from_pretrained("ProsusAI/finbert")
-model = BertForSequenceClassification.from_pretrained("ProsusAI/finbert")
-nlp = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
-
-def score_finbert(text):
-    result = nlp(text[:512])[0]  # FinBERT max 512 tokens
-    label_map = {"positive": 1, "neutral": 0, "negative": -1}
-    return label_map[result["label"]] * result["score"]
-```
-
-#### VADER (Valence Aware Dictionary and sEntiment Reasoner)
-Best for: casual social media language, fashion commentary, pop culture posts
-
-```python
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
-analyzer = SentimentIntensityAnalyzer()
-
-def score_vader(text):
-    return analyzer.polarity_scores(text)["compound"]  # Range: [-1, 1]
-```
-
-**Aggregation:** Daily weighted-average sentiment score, weighted by post upvote score (higher-engagement posts carry more weight).
-
-```python
-def daily_weighted_sentiment(df, score_col="sentiment", weight_col="score"):
-    df["weighted"] = df[score_col] * df[weight_col].clip(lower=1)
-    return df.groupby("date").apply(
-        lambda x: x["weighted"].sum() / x[weight_col].clip(lower=1).sum()
-    )
-```
-
----
-
-### 3. Stock Price Data
-
-```python
-import yfinance as yf
-
-tickers = ["1913.HK", "MC.PA", "KER.PA", "CPRI", "TPR", "EL"]
-
-def get_returns(tickers, start, end):
-    data = yf.download(tickers, start=start, end=end, auto_adjust=True)["Close"]
-    returns = data.pct_change().dropna()
-    return returns
-```
-
-**Abnormal returns** are calculated relative to a market benchmark:
-- US-listed stocks: S&P 500 (`^GSPC`)
-- European stocks: STOXX Europe 600 (`^STOXX`)
-- HK-listed stocks: Hang Seng Index (`^HSI`)
-
-```
-Abnormal Return = Actual Return - Expected Return (CAPM or market-model)
-Cumulative Abnormal Return (CAR) = sum of ARs over event window
-```
-
----
-
-### 4. Event Study
-
-Classic market microstructure event study methodology:
-
-1. **Estimation window:** [-60, -10] trading days before each event (used to estimate normal returns)
-2. **Event window:** [-2, +5] trading days around each event
-3. **Test statistic:** t-test on CARs across the four events
-
-```python
-def compute_car(returns, benchmark_returns, event_date, window=(-2, 5)):
-    # Estimate beta from estimation window
-    estimation = returns[event_date - 60 : event_date - 10]
-    beta = np.cov(estimation, benchmark_returns[estimation.index])[0,1] / \
-           np.var(benchmark_returns[estimation.index])
-    
-    # Compute abnormal returns in event window
-    event = returns[event_date + window[0] : event_date + window[1]]
-    expected = benchmark_returns[event.index] * beta
-    ar = event - expected
-    return ar.cumsum()
-```
-
----
-
-### 5. Sentiment–Return Correlation
-
-**Key test:** Does *t-1* or *t-2* sentiment predict *t* abnormal returns?
-
-```python
-from scipy.stats import pearsonr, spearmanr
-
-# Lag sentiment by 1 and 2 days
-for lag in [0, 1, 2]:
-    lagged_sentiment = sentiment_series.shift(lag)
-    aligned = pd.concat([lagged_sentiment, abnormal_returns], axis=1).dropna()
-    r, p = pearsonr(aligned.iloc[:, 0], aligned.iloc[:, 1])
-    print(f"Lag {lag}: r={r:.3f}, p={p:.3f}")
-```
-
----
-
-## 📦 Dependencies
-
-```
-# requirements.txt
-praw>=7.7.0
-yfinance>=0.2.36
-pandas>=2.0.0
-numpy>=1.24.0
-scipy>=1.11.0
-transformers>=4.40.0
-torch>=2.0.0
-vaderSentiment>=3.3.2
-matplotlib>=3.7.0
-seaborn>=0.12.0
-jupyter>=1.0.0
-python-dotenv>=1.0.0
-scikit-learn>=1.3.0
-statsmodels>=0.14.0
-```
-
-Install:
 ```bash
+git clone https://github.com/jsabazova/dwp2-luxury-sentiment
+cd dwp2-luxury-sentiment
 pip install -r requirements.txt
+
+# Add API keys (Guardian + YouTube only — Reddit needs no auth)
+cp .env.example .env   # then fill in your keys
+
+# Collect data
+python src/reddit_scraper.py     # no credentials needed
+python src/guardian_scraper.py
+python src/youtube_scraper.py
+python src/stock_data.py
+
+# Score and analyse
+python src/sentiment.py
+python src/event_study.py
+
+# Run all notebooks
+for nb in notebooks/0*.ipynb; do
+  jupyter nbconvert --to notebook --execute --inplace "$nb"
+done
 ```
 
 ---
 
-## 🔐 Environment Setup
+## Environment Setup
 
-Copy `.env.example` to `.env` and fill in your credentials:
+Create a `.env` file in the project root:
 
 ```bash
-# .env.example
-REDDIT_CLIENT_ID=your_client_id
-REDDIT_CLIENT_SECRET=your_client_secret
-REDDIT_USER_AGENT=dwp2-sentiment/1.0
+GUARDIAN_API_KEY=your_key_here    # free at open-platform.theguardian.com
+YOUTUBE_API_KEY=your_key_here     # free at console.cloud.google.com
 ```
 
-Reddit API credentials are free — register at [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps).
+Reddit requires **no credentials** — this project uses the public JSON search endpoint (`reddit.com/r/{sub}/search.json`), which is free and read-only.
 
 ---
 
-## 📊 Expected Outputs
+## Figures
 
-- **Sentiment time series** plots for each event window
-- **CAR plots** for each stock across each event window
-- **Correlation heatmap** — sentiment lag vs. abnormal return by stock
-- **Summary statistics table** — mean CAR, t-stat, p-value per event
-- **Key finding narrative** — did sentiment lead price? Which stocks? Which events?
+All figures are pre-generated in `results/figures/`:
 
----
-
-## ⚠️ Limitations & Honest Caveats
-
-- **Prada has no financial stake in the film** — any correlation is cultural, not fundamental
-- **Reddit ≠ X/Twitter** — skews toward English-speaking, US/UK audiences; may underweight Asian sentiment relevant to HKEx-listed Prada
-- **Short-term stock prediction is noisy** — macro conditions (Fed decisions, FX moves) can swamp cultural signals in any given window
-- **Small event sample** — four events is not enough for robust statistical inference; findings should be framed as exploratory
-- **Survivorship / selection** — we chose these stocks because they're fashion-adjacent; null results are equally valid and interesting
-
----
-
-## 🔭 Extensions (Future Work)
-
-- Add X/Twitter data if API access becomes affordable
-- Expand to Google Trends as a free, high-volume sentiment proxy
-- Test on other fashion-coded cultural events (Met Gala, major fashion weeks, brand campaigns)
-- Build a generalised "fashion sentiment → luxury equity" signal pipeline
-- Compare FinBERT vs. VADER performance on fashion-specific language
+| Figure | Description |
+|--------|-------------|
+| `car_heatmap.png` | All tickers × events — the overview |
+| `ic_scatter.png` | Sentiment vs abnormal return, per source |
+| `vix_regime.png` | VIX level at each event + regime-split CARs |
+| `sentiment_timeseries.png` | Reddit + YouTube + Guardian across all events |
+| `sector_alpha.png` | Idiosyncratic alpha vs LUXE ETF |
+| `signal_backtest.png` | Cumulative P&L of sentiment-driven strategy |
+| `lyst_overlay.png` | Prada share price vs Lyst brand heat rank |
+| `price_performance.png` | Normalised price performance, indexed to 100 |
+| `car_paths.png` | Daily AR paths through event windows |
+| `lag_correlation_vader.png` | Lag [0,1,2] correlation heatmap |
+| `return_correlation.png` | Cross-ticker return correlation matrix |
+| `return_distributions.png` | Daily return distributions, all 7 tickers |
+| `post_volume.png` | Reddit post volume around each event |
+| `cpri_vs_tpr.png` | Capri vs Tapestry event study comparison |
 
 ---
 
-## 👤 Author
+## Limitations
 
-**J. Sabazova**  
-Quantitative analysis | NLP | Financial markets  
+- **Statistical power:** 8 trading days per test is insufficient to detect moderate effects
+- **Sample size:** 9 events; IC and Sharpe estimates require 50+ for statistical validity
+- **VIX confound:** Film events occurred during high-volatility regime (VIX 24–28)
+- **No Chinese-language data:** Xiaohongshu / Weibo would better capture sentiment relevant to HKEx-listed Prada
+- **Reddit sampling:** Low post counts for some events (3–15 posts) make weighted sentiment noisy
+
+---
+
+## Future Extensions
+
+- Google Trends integration (scraper written in `src/trends_scraper.py` — re-run after rate limit clears)
+- Re-run theatrical_release analysis after May 8 when the full +5 trading day window closes
+- Expand to other fashion-cultural events (Met Gala, BAFTA, major brand campaigns)
+- Add Chinese-language social platforms for HKEx coverage
+- Meta-analytic combination of Prada p-values across events (Fisher's method)
+
+---
+
+## Author
+
+**J. Sabazova**
+Quantitative analysis · NLP · Financial markets
 [GitHub](https://github.com/jsabazova) · [LinkedIn](https://linkedin.com/in/jamila-sabazova)
 
 ---
 
-## 📄 License
-
-MIT License — see `LICENSE` for details.
-
----
-
-*This project is for research and portfolio purposes only. Nothing in this repository constitutes financial advice.*
+*Research and portfolio purposes only. Nothing in this repository constitutes financial advice.*
