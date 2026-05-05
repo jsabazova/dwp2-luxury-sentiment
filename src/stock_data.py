@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-from utils import TICKERS, ALL_BENCHMARKS, EVENT_DATES, log_returns
+from utils import TICKERS, ALL_BENCHMARKS, REFERENCE_TICKERS, EVENT_DATES, log_returns
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s")
 log = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ RAW_DIR = Path(__file__).parent.parent / "data" / "raw" / "stocks"
 DOWNLOAD_START = "2024-07-01"
 DOWNLOAD_END   = date.today().isoformat()
 
-ALL_TICKERS = list(TICKERS.keys()) + ALL_BENCHMARKS
+ALL_TICKERS = list(TICKERS.keys()) + ALL_BENCHMARKS + list(REFERENCE_TICKERS.keys())
 
 
 def download_prices() -> pd.DataFrame:

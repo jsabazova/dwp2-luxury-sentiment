@@ -1,0 +1,4 @@
+source,n,IC (Pearson),p (Pearson),Rank IC (Spearman),p (Spearman)
+Reddit,45,0.201,0.1855,0.1436,0.3465
+Youtube,58,0.0407,0.7614,0.0738,0.5818
+Guardian,52,-0.176,0.2121,-0.1895,0.1784

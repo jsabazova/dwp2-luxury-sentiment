@@ -22,6 +22,12 @@ EVENT_DATES = {
     "musical_previews":    date(2024, 10, 24),   # West End previews begin
     "musical_opening":     date(2024, 12,  5),   # West End opening night
     "musical_extension":   date(2026,  3, 13),   # run extended to Feb 2027
+
+    # ── Milan Fashion Week — Prada runway shows ───────────────────────────────
+    # Stock-only events (no Reddit sentiment collected); validate brand signal
+    # independently of the film/musical narrative
+    "prada_ss26_show":     date(2025,  9, 18),   # MFW SS26 Womenswear, Milan
+    "prada_fw26_show":     date(2026,  2, 20),   # MFW FW26 Womenswear, Milan
 }
 
 # ── Stock universe ─────────────────────────────────────────────────────────────
@@ -33,6 +39,7 @@ TICKERS = {
     "CPRI":    "Capri Holdings",
     "TPR":     "Tapestry",
     "EL":      "Estee Lauder",
+    "RMS.PA":  "Hermes",          # ultra-luxury benchmark, Euronext Paris
 }
 
 # Benchmark index for each ticker (used in market model)
@@ -43,9 +50,29 @@ BENCHMARKS = {
     "CPRI":    "^GSPC",
     "TPR":     "^GSPC",
     "EL":      "^GSPC",
+    "RMS.PA":  "^STOXX50E",
 }
 
 ALL_BENCHMARKS = list(set(BENCHMARKS.values()))
+
+# ── Reference / context tickers ────────────────────────────────────────────────
+# Downloaded alongside main tickers but NOT subject to event study.
+# Used for sector control and volatility regime analysis.
+REFERENCE_TICKERS = {
+    "LUXE":  "Roundhill Luxury ETF",    # global luxury sector benchmark
+    "^VIX":  "CBOE Volatility Index",   # market vol regime
+}
+
+# ── Lyst Index — quarterly brand hotness rankings ──────────────────────────────
+# Source: lyst.com/lyst-index (verify each entry against the published PDF).
+# Prada Group (Prada + Miu Miu) has ranked consistently in top 5 since 2023.
+# Use as qualitative narrative anchor in the article, not a quantitative input.
+LYST_INDEX = {
+    date(2024,  7,  1): {"prada_rank": 4,  "miu_miu_rank": 1,  "quarter": "Q2 2024"},
+    date(2024, 10,  1): {"prada_rank": 3,  "miu_miu_rank": 1,  "quarter": "Q3 2024"},
+    date(2025,  1,  1): {"prada_rank": 2,  "miu_miu_rank": 2,  "quarter": "Q4 2024"},
+    date(2025,  4,  1): {"prada_rank": 1,  "miu_miu_rank": 3,  "quarter": "Q1 2025"},
+}
 
 # ── Reddit config ──────────────────────────────────────────────────────────────
 
@@ -76,15 +103,24 @@ MUSICAL_QUERIES = [
     "miranda priestly musical",
 ]
 
-# Which events use film queries vs musical queries
+FASHION_WEEK_QUERIES = [
+    "prada fashion week",
+    "prada runway",
+    "prada milan fashion week",
+    "prada womenswear",
+]
+
+# Which events use film queries vs musical queries vs fashion week queries
 EVENT_QUERY_MAP = {
-    "teaser_trailer":   SEARCH_QUERIES,
-    "full_trailer":     SEARCH_QUERIES,
-    "nyc_premiere":     SEARCH_QUERIES,
+    "teaser_trailer":     SEARCH_QUERIES,
+    "full_trailer":       SEARCH_QUERIES,
+    "nyc_premiere":       SEARCH_QUERIES,
     "theatrical_release": SEARCH_QUERIES,
-    "musical_previews": MUSICAL_QUERIES,
-    "musical_opening":  MUSICAL_QUERIES,
-    "musical_extension": MUSICAL_QUERIES,
+    "musical_previews":   MUSICAL_QUERIES,
+    "musical_opening":    MUSICAL_QUERIES,
+    "musical_extension":  MUSICAL_QUERIES,
+    "prada_ss26_show":    FASHION_WEEK_QUERIES,
+    "prada_fw26_show":    FASHION_WEEK_QUERIES,
 }
 
 # ── Event study windows ────────────────────────────────────────────────────────

@@ -129,4 +129,68 @@ If you're interested in the methodology, have run similar event studies, or have
 
 ---
 
+## Production Notes — Visuals & Layout
+
+### Suggested article structure
+
+```
+[Hero image: red heel installation outside Dominion Theatre, or NYC premiere red carpet]
+
+Hook paragraph
+
+[Chart: sentiment_timeseries.png — multi-source Reddit + YouTube + Guardian]
+
+Methodology section
+
+[Chart: car_heatmap.png — the money shot, all tickers × events]
+
+Findings section
+
+[Chart: price_performance.png — most accessible to non-quant readers]
+
+Conclusion
+```
+
+### Figures to attach (already generated in results/figures/)
+
+| File | Use for |
+|------|---------|
+| `car_heatmap.png` | Most visually striking — shows all tickers × events at a glance |
+| `sentiment_timeseries.png` | Tells the story arc across all 3 data sources |
+| `price_performance.png` | Accessible to non-quant readers |
+| `post_volume.png` | Good for the "here's how I collected the data" section |
+
+### Where to get imagery (no copyright issues)
+
+**Movie / premiere:**
+- Screenshot a frame from the official trailers on YouTube — editorial fair use
+- Disney press release images from the NYC premiere are usable with attribution
+- Search `site:prada.com` for official brand imagery
+
+**Red heel shoe at Dominion Theatre:**
+- Search `"Dominion Theatre" "devil wears prada" shoe` on Instagram or X
+- Dozens of fans posted their own photos outside the theatre
+- DM one for reshare permission — takes 2 minutes, people almost always say yes
+
+**Prada runway:**
+- `@prada` on Instagram posts every show publicly — taggable in LinkedIn
+- Prada SS26 womenswear (Sep 2025) and FW26 (Feb 2026) are both relevant
+
+**Getty free editorial embeds:**
+- Getty offers free editorial embeds for non-commercial use
+- Search "Devil Wears Prada musical" or "Prada 2026" at gettyimages.com
+- Use their embed code directly in the LinkedIn article
+
+### Key cross-source sentiment finding to highlight visually
+
+The audience vs press divergence is the most visually interesting story:
+
+- **YouTube audience** (trailer comments): +0.31 to +0.32 — positive throughout
+- **Guardian press** (professional critics): -0.19 at NYC premiere, -0.08 at theatrical release
+- **West End musical** (both sources agree): strongly positive
+
+A simple bar chart comparing these three numbers side by side would make a clean, shareable visual that non-quants immediately understand.
+
+---
+
 **Tags:** #quantitativefinance #nlp #sentimentanalysis #alternativedata #luxurygoods #financialmarkets #python #machinelearning #eventdriven
