@@ -97,7 +97,10 @@ def fetch_all(keywords: list[str], start: date, end: date) -> pd.DataFrame:
         df = fetch_chunk(keywords, chunk_start, chunk_end)
         if df is not None:
             chunks.append(df)
-        chunk_start = chunk_end - timedelta(days=OVERLAP)
+            chunk_start = chunk_end - timedelta(days=OVERLAP)
+        else:
+            # On failure always advance past this chunk to avoid infinite loop
+            chunk_start = chunk_end
 
     if not chunks:
         log.error("No data fetched from Google Trends")
